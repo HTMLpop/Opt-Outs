@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Opt-Out Dashboard (v7)</title>
+<style>
+  :root {
+    --bg:#0b0f14; --card:#111822; --muted:#6b7280; --text:#e5e7eb; --accent:#60a5fa; --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+    --border:#1f2937; --input:#0d141d;
+  }
+  :root.light {
+    --bg:#f7fafc; --card:#ffffff; --muted:#6b7280; --text:#0b0f14; --accent:#2563eb; --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --border:#e5e7eb; --input:#f3f4f6;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:var(--bg); color:var(--text); }
+  header { position:sticky; top:0; z-index:30; background:linear-gradient(to bottom, color-mix(in oklab, var(--bg), transparent 40%), transparent); backdrop-filter: blur(8px); padding:16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  h1 { margin:0; font-size:20px; letter-spacing:.2px; }
+  .top-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .toggle, .btn { border:1px solid var(--border); background:var(--input); color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
+  .btn:hover, .toggle:hover { filter: brightness(1.05); }
+  .btn-primary { background: color-mix(in oklab, var(--accent), black 85%); border-color: color-mix(in oklab, var(--accent), black 60%); }
+  .btn-ok { background: color-mix(in oklab, var(--ok), black 85%); border-color: color-mix(in oklab, var(--ok), black 60%); color: #bbf7d0; }
+  .container { display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; }
+  .card h2 { font-size:16px; margin:0 0 10px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:8px 0 6px; }
+  input[type="text"], input[type="email"], input[type="tel"] , textarea {
+    width:100%; background:var(--input); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 12px; outline:none;
+  }
+  input::placeholder, textarea::placeholder { color:#475569; }
+  .row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  table { width:100%; border-collapse:separate; border-spacing:0 8px; }
+  thead th { text-align:left; font-size:12px; color:var(--muted); font-weight:600; padding:0 8px 8px; }
+  tbody tr { background: var(--card); border:1px solid var(--border); }
+  tbody td { padding:10px 8px; vertical-align:top; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  tbody tr td:first-child { border-left:1px solid var(--border); border-top-left-radius:12px; border-bottom-left-radius:12px; }
+  tbody tr td:last-child { border-right:1px solid var(--border); border-top-right-radius:12px; border-bottom-right-radius:12px; }
+  .table-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .status { width: 160px; }
+  .muted { color:var(--muted); font-size:12px; }
+  .small { font-size: 11px; }
+  .progress { display:flex; align-items:center; gap:8px; }
+  .bar { flex:1; height:8px; border-radius:999px; background:var(--input); border:1px solid var(--border); overflow:hidden; }
+  .bar > div { height:100%; width:0%; background:linear-gradient(90deg, var(--ok), var(--accent)); transition: width .3s ease; }
+  .check { display:inline-block; width:16px; height:16px; border-radius:50%; border:1px solid color-mix(in oklab, var(--ok), black 40%); background: color-mix(in oklab, var(--ok), black 85%); color: color-mix(in oklab, var(--ok), white 20%); text-align:center; line-height:16px; font-weight:800; font-size:12px; margin-left:6px; }
+  .pill { display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); color:inherit; }
+  .pill.ok { border-color: color-mix(in oklab, var(--ok), black 30%); color: color-mix(in oklab, var(--ok), white 20%); }
+  .pill.warn { border-color: color-mix(in oklab, var(--warn), black 30%); color: color-mix(in oklab, var(--warn), white 20%); }
+  .pill.bad { border-color: color-mix(in oklab, var(--bad), black 30%); color: color-mix(in oklab, var(--bad), white 20%); }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color: var(--accent); border-radius:50%; animation: spin .8s linear infinite; margin-left:6px; vertical-align: text-bottom; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ghost { opacity:.5 }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Opt-Out Dashboard</h1>
+    <div class="top-actions">
+      <button class="toggle" id="themeToggle" title="Toggle dark/light">🌙 / ☀️</button>
+      <button class="btn" id="exportStatus">Export statuses</button>
+      <button class="btn" id="exportFull">Export brokers + statuses</button>
+      <button class="btn" id="connectExt">Connect Extension</button>
+      <span class="muted small" id="extState">Not connected</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside>
+      <div class="card">
+        <h2>PII & Controls</h2>
+        <div class="muted">Fill your details and click <strong>Run in Background</strong>. The list will show a spinner for each broker until a result lands; buttons appear only if needed.</div>
+        <label>Full name</label>
+        <input id="p_name" type="text" placeholder="Jane Q. Doe" />
+        <div class="row">
+          <div><label>Email</label><input id="p_email" type="email" placeholder="jane@example.com" /></div>
+          <div><label>Phone</label><input id="p_phone" type="tel" placeholder="(555) 555-5555" /></div>
+        </div>
+        <label>Street address</label>
+        <input id="p_addr1" type="text" placeholder="123 Main St Apt 4B" />
+        <div class="row">
+          <div><label>City</label><input id="p_city" type="text" placeholder="Lakeland" /></div>
+          <div><label>State</label><input id="p_state" type="text" placeholder="FL" /></div>
+        </div>
+        <div class="row">
+          <div><label>ZIP</label><input id="p_zip" type="text" placeholder="33801" /></div>
+          <div><label>DOB (optional)</label><input id="p_dob" type="text" placeholder="YYYY-MM-DD" /></div>
+        </div>
+        <div class="table-actions" style="margin-top:10px; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="startBackground">Run in Background</button>
+        </div>
+        <div id="searchMsg" class="muted" style="margin-top:8px;"></div>
+        <div class="muted small" style="margin-top:6px;">If viewing via file://, enable “Allow access to file URLs” in the extension.</div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <h2>Progress</h2>
+        <div class="progress">
+          <div class="bar"><div id="progressBar"></div></div>
+          <div class="muted" id="progressText">0% (0/0)</div>
+        </div>
+        <div class="muted" style="margin-top:8px;" id="tallies"></div>
+        <div class="muted small" id="runHint" style="margin-top:6px;"></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="card">
+        <h2>Broker List</h2>
+        <div class="muted">Spinner shows while a broker is being checked. Buttons appear as soon as we know what’s needed.</div>
+
+        <div style="overflow:auto; margin-top:10px;">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th>Broker</th>
+                <th>Parent / Group</th>
+                <th>Method</th>
+                <th>Cascade</th>
+                <th>Actions</th>
+                <th>Notes & Steps</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="dlgMail">
+    <h3>Mail Template</h3>
+    <div class="muted">Copy this letter and print or save as PDF.</div>
+    <pre id="mailText"></pre>
+    <div class="dialog-actions">
+      <button class="btn" id="mailCopy">Copy</button>
+      <button class="btn btn-primary" id="mailClose">Close</button>
+    </div>
+  </dialog>
+
+<script>
+const DATA_URL = "data/brokers.json";
+const STATUS_OPTIONS = ["Not started","In progress","Submitted","Verified","Rejected","Needs Email","Needs Mail","Needs CAPTCHA","Needs Site"];
+let DATA = [];
+let statusMap = {};
+const statusKey = "optout_status_v7";
+
+(function initTheme(){
+  const saved = localStorage.getItem("optout_theme");
+  if (saved === "light") document.documentElement.classList.add("light");
+})();
+document.getElementById("themeToggle").addEventListener("click", ()=>{
+  document.documentElement.classList.toggle("light");
+  const mode = document.documentElement.classList.contains("light") ? "light" : "dark";
+  localStorage.setItem("optout_theme", mode);
+});
+
+function el(tag, attrs={}, children=[]) {
+  const e = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v]) => {
+    if (k === "class") e.className = v;
+    else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on") && typeof v === "function") e.addEventListener(k.substring(2), v);
+    else e.setAttribute(k,v);
+  });
+  (Array.isArray(children) ? children : [children]).filter(Boolean).forEach(c => e.append(c));
+  return e;
+}
+function getPII(){
+  const get = id => document.getElementById(id).value.trim();
+  return {
+    name: get("p_name"), email: get("p_email"), phone: get("p_phone"),
+    addr1: get("p_addr1"), city: get("p_city"), state: get("p_state"),
+    zip: get("p_zip"), dob: get("p_dob")
+  };
+}
+function keyOf(row){ return `${row["Group Key"]}||${row["Broker Name"]}`; }
+function getStatus(row){ return statusMap[keyOf(row)] || "Not started"; }
+function setStatus(row, val){ statusMap[keyOf(row)] = val; saveStatus(); updateTallies(); }
+function loadStatus(){ try { statusMap = JSON.parse(localStorage.getItem(statusKey) || "{}"); } catch { statusMap = {}; } }
+function saveStatus(){ localStorage.setItem(statusKey, JSON.stringify(statusMap)); }
+function cascadePill(val){
+  const txt = String(val||"Unknown"); let cls = "pill";
+  if (txt.toLowerCase().startsWith("yes")) cls += " ok";
+  else if (txt.toLowerCase().startsWith("no")) cls += " bad";
+  else cls += " warn";
+  return el("span",{class:cls, html:txt});
+}
+
+function buildEmailSubject(row){ return `Opt-Out Request - ${row["Broker Name"]}`; }
+function buildEmailBody(row){
+  const p = getPII();
+  const req = String(row["Required Info"]||"").replace(/nan/i,"").trim();
+  const extra = req ? `\\n\\nAdditional info (from your instructions): ${req}` : "";
+  return [
+    `To ${row["Broker Name"]} Privacy Team,`,
+    ``,
+    `I am requesting removal of my personal information from your data products and marketing databases and that you stop selling or sharing my personal information, as applicable under relevant U.S. privacy laws.`,
+    ``,
+    `Full name: ${p.name||""}`,
+    `Email: ${p.email||""}`,
+    `Phone: ${p.phone||""}`,
+    `Address: ${p.addr1||""}, ${p.city||""}, ${p.state||""} ${p.zip||""}`,
+    `Date of birth: ${p.dob||""}`,
+    extra,
+    ``,
+    `If you share a common database with affiliated brands or child companies, please apply this request across all affiliated properties.`,
+    ``,
+    `Please confirm completion and describe any data retained for legal compliance, and provide instructions if identity verification is required.`,
+    ``,
+    `Thank you,`,
+    ``,
+    `${p.name||""}`
+  ].join("\\n");
+}
+function gmailHref(row){
+  const to = encodeURIComponent(String(row["Opt-Out URL/Email"]||"").trim());
+  const su = encodeURIComponent(buildEmailSubject(row));
+  const body = encodeURIComponent(buildEmailBody(row));
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${su}&body=${body}`;
+}
+function buildMailLetter(row){
+  const p = getPII();
+  const req = String(row["Required Info"]||"").replace(/nan/i,"").trim();
+  const extra = req ? `\\n\\nAdditional info (from instructions): ${req}` : "";
+  return `
+${p.name||""}
+${p.addr1||""}
+${p.city||""}, ${p.state||""} ${p.zip||""}
+${p.email||""} • ${p.phone||""}
+
+${new Date().toISOString().slice(0,10)}
+
+Privacy Team
+${row["Broker Name"]||""}
+
+Subject: Opt-Out / Do Not Sell or Share My Personal Information
+
+To whom it may concern,
+
+I am requesting that you remove my personal information from your data products and marketing databases and that you stop selling or sharing my personal information, as applicable under relevant privacy laws.
+
+Full name: ${p.name||""}
+Email: ${p.email||""}
+Phone: ${p.phone||""}
+Address: ${p.addr1||""}, ${p.city||""}, ${p.state||""} ${p.zip||""}
+Date of birth: ${p.dob||""}${extra}
+
+If you share a common database with affiliated brands or child companies, please apply this request across all affiliated properties.
+
+Please confirm completion and describe any data retained for legal compliance, and provide any verification steps if needed.
+
+Sincerely,
+
+${p.name||""}
+`.trim();
+}
+
+function renderActionsForStatus(row, status){
+  const url = (row["Opt-Out URL/Email"]||"").trim();
+  const box = el("div",{class:"table-actions"});
+  if (status === "In progress"){
+    box.append(el("span",{class:"muted"},["Checking…"]), el("span",{class:"spin"}));
+    return box;
+  }
+  if (status === "Needs Email" && url.includes("@")){
+    box.append(
+      el("button",{class:"btn", onclick:()=> navigator.clipboard.writeText(buildEmailBody(row))},["Email Template"]),
+      el("a",{href:gmailHref(row), class:"btn", target:"_blank"},["Open Gmail"])
+    );
+    return box;
+  }
+  if (status === "Needs Mail"){
+    box.append(el("button",{class:"btn", onclick:()=> openMailDialog(buildMailLetter(row))},["Mail Template"]));
+    return box;
+  }
+  if (status === "Needs CAPTCHA" && url.startsWith("http")){
+    box.append(el("a",{href:url, class:"btn", target:"_blank"},["CAPTCHA verification"]));
+    return box;
+  }
+  if (status === "Needs Site" && url.startsWith("http")){
+    box.append(el("a",{href:url, class:"btn", target:"_blank"},["Visit site"]));
+    return box;
+  }
+  if (status === "Submitted" || status === "Verified"){
+    box.append(el("span",{class:"muted"},[status]));
+    return box;
+  }
+  // Not started / Rejected / others → no buttons until run
+  box.append(el("span",{class:"muted"},["—"]));
+  return box;
+}
+
+function renderRow(row){
+  const tr = el("tr");
+  const st = getStatus(row);
+
+  const broker = el("td",{},[
+    el("div",{html:`<strong>${row["Broker Name"]||""}</strong>`}),
+    el("div",{class:"muted", html: row["Relationship Type"]||""}),
+    st==="Verified" ? el("span",{class:"check", title:"Verified ✓"},["✓"]) : (st==="In progress" ? el("span",{class:"spin", title:"Working…"}) : null)
+  ]);
+  const parent = el("td",{},[
+    el("div",{html: (row["Parent Company"]||"") || row["Group Key"] || ""}),
+    el("div",{class:"muted", html:`Group: ${(row["Group Key"]||"")}`})
+  ]);
+  const method = el("td",{},[
+    el("div",{html: row["Opt-Out Method"]||""}),
+    (row["Opt-Out URL/Email"]||"").trim()
+      ? el("div",{class:"muted", html: row["Opt-Out URL/Email"]})
+      : null
+  ]);
+  const cascade = el("td",{},[ (function(){const txt=String(row["Cascade Opt-Out?"]||"Unknown"); let cls="pill"; if(txt.toLowerCase().startsWith("yes"))cls+=" ok"; else if(txt.toLowerCase().startsWith("no"))cls+=" bad"; else cls+=" warn"; return el("span",{class:cls, html:txt});})() ]);
+
+  const actions = el("td",{},[ renderActionsForStatus(row, st) ]);
+
+  const notesText = [row["Notes"]||"", row["How to Initiate Opt-Out"]||""].filter(Boolean).join(" \\n ");
+  const notes = el("td",{},[
+    notesText.length > 180
+      ? el("details",{},[
+          el("summary",{html: (notesText.slice(0,180)+"…").replace(/\\n/g,"<br/>")}),
+          el("div",{class:"muted", html: notesText.replace(/\\n/g,"<br/>")})
+        ])
+      : el("div",{class:"muted", html: notesText.replace(/\\n/g,"<br/>")})
+  ]);
+
+  const statusSel = el("select",{class:"status"});
+  STATUS_OPTIONS.forEach(s => statusSel.append(el("option",{value:s, html:s})));
+  statusSel.value = st;
+  statusSel.addEventListener("change", ()=> { setStatus(row, statusSel.value); rerenderRow(tr, row); });
+  const status = el("td",{},[statusSel]);
+
+  [broker,parent,method,cascade,actions,notes,status].forEach(td => tr.append(td));
+  return tr;
+}
+function rerenderRow(tr, row){
+  // Rebuild actions cell + broker check/spinner
+  const st = getStatus(row);
+  const actionsTd = tr.children[4];
+  actionsTd.innerHTML = "";
+  actionsTd.append(renderActionsForStatus(row, st));
+  const brokerTd = tr.children[0];
+  // Remove old check/spinner
+  const old = brokerTd.querySelector(".check, .spin"); if (old) old.remove();
+  if (st === "Verified"){
+    brokerTd.append(el("span",{class:"check"},["✓"]));
+  } else if (st === "In progress"){
+    brokerTd.append(el("span",{class:"spin"}));
+  }
+}
+
+function applyData(){
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+  DATA.forEach(r => tbody.append(renderRow(r)));
+  updateTallies();
+}
+function updateTallies(){
+  const total = DATA.length;
+  const vals = Object.values(statusMap);
+  const c = {
+    Verified: vals.filter(v=>v==="Verified").length,
+    Submitted: vals.filter(v=>v==="Submitted").length,
+    "In progress": vals.filter(v=>v==="In progress").length,
+    Rejected: vals.filter(v=>v==="Rejected").length,
+    "Needs Email": vals.filter(v=>v==="Needs Email").length,
+    "Needs Mail": vals.filter(v=>v==="Needs Mail").length,
+    "Needs CAPTCHA": vals.filter(v=>v==="Needs CAPTCHA").length,
+    "Needs Site": vals.filter(v=>v==="Needs Site").length,
+  };
+  const pct = total ? Math.round(c.Verified*100/total) : 0;
+  document.getElementById("progressBar").style.width = pct+"%";
+  document.getElementById("progressText").textContent = `${pct}% (${c.Verified}/${total}) Verified`;
+  document.getElementById("tallies").innerHTML =
+    `Needs — Email: ${c["Needs Email"]}, Mail: ${c["Needs Mail"]}, CAPTCHA: ${c["Needs CAPTCHA"]}, Site: ${c["Needs Site"]}. ` +
+    `Statuses — Verified: ${c.Verified}, Submitted: ${c.Submitted}, In progress: ${c["In progress"]}, Rejected: ${c.Rejected}.`;
+}
+
+// Export
+document.getElementById("exportStatus").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(statusMap, null, 2)], {type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "optout_status_export.json"; a.click();
+});
+document.getElementById("exportFull").addEventListener("click", ()=>{
+  const merged = DATA.map(r => ({...r, Status: statusMap[keyOf(r)] || "Not started"}));
+  const blob = new Blob([JSON.stringify(merged, null, 2)], {type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "optout_brokers_with_status.json"; a.click();
+});
+
+// Extension Bridge
+let extConnected = false;
+function extPost(msg){ window.postMessage({source:"optout-dashboard", ...msg}, "*"); }
+window.addEventListener("message", (ev)=> {
+  const d = ev.data||{};
+  if (d.source !== "optout-extension") return;
+  if (d.type === "PONG") {
+    extConnected = true;
+    document.getElementById("extState").textContent = "Extension connected";
+  }
+  if (d.type === "STATUS_UPDATE"){
+    (d.updates||[]).forEach(u => {
+      const fakeRow = DATA.find(x => keyOf(x) === `${u.groupKey}||${u.brokerName}`);
+      if (!fakeRow) return;
+      statusMap[keyOf(fakeRow)] = u.status;
+      // Update that row in-place
+      const tbody = document.getElementById("tbody");
+      const idx = DATA.indexOf(fakeRow);
+      const tr = tbody.children[idx];
+      if (tr) rerenderRow(tr, fakeRow);
+    });
+    saveStatus(); updateTallies();
+  }
+});
+document.getElementById("connectExt").addEventListener("click", ()=>{ extPost({type:"PING"}); });
+
+// Start background run: mark all Not started -> In progress (show spinners), then let extension update
+document.getElementById("startBackground").addEventListener("click", ()=>{
+  if (!extConnected){ document.getElementById("searchMsg").textContent = "Extension not connected."; return; }
+  const pii = getPII();
+  // Mark all for run
+  DATA.forEach(r => { statusMap[keyOf(r)] = "In progress"; });
+  saveStatus(); applyData();
+  document.getElementById("runHint").textContent = "Running… you can keep this tab open to watch updates.";
+  extPost({type:"RUN", pii, brokers: DATA}); // recipes optional, v0.3 does heuristics too
+});
+
+// Mail dialog helpers
+function openMailDialog(text) {
+  const dlg = document.getElementById("dlgMail");
+  document.getElementById("mailText").textContent = text;
+  dlg.showModal();
+}
+document.getElementById("mailClose").addEventListener("click", ()=> document.getElementById("dlgMail").close());
+document.getElementById("mailCopy").addEventListener("click", ()=>{
+  const txt = document.getElementById("mailText").textContent;
+  navigator.clipboard.writeText(txt);
+});
+
+// INIT
+(async function init(){
+  try { const res = await fetch(DATA_URL); DATA = await res.json(); } catch(e) { alert("Failed to load brokers.json"); return; }
+  loadStatus();
+  DATA.forEach(r => { const k = keyOf(r); if (!(k in statusMap)) statusMap[k] = "Not started"; });
+  saveStatus(); applyData(); updateTallies();
+})();
+</script>
+</body>
+</html>
