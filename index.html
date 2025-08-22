@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Opt-Out Dashboard — Enhanced</title>
+<style>
+  :root { --bg:#0b0f14; --card:#111822; --muted:#6b7280; --text:#e5e7eb; --accent:#60a5fa; --ok:#22c55e; --warn:#eab308; --bad:#ef4444; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--text); }
+  header { position:sticky; top:0; z-index:30; background:linear-gradient(to bottom, #0b0f14cc, #0b0f1400); backdrop-filter: blur(8px); padding:16px; border-bottom:1px solid #1f2937; }
+  h1 { margin:0 0 6px; font-size:22px; letter-spacing:.2px; }
+  .sub { color:var(--muted); font-size:13px; margin-top:2px; }
+  .container { display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; }
+  .card { background:var(--card); border:1px solid #1f2937; border-radius:14px; padding:14px; }
+  .card h2 { font-size:16px; margin:0 0 10px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:8px 0 6px; }
+  input[type="text"], input[type="email"], input[type="tel"], textarea, select {
+    width:100%; background:#0d141d; color:var(--text); border:1px solid #1f2937; border-radius:10px; padding:10px 12px; outline:none;
+  }
+  input::placeholder, textarea::placeholder { color:#475569; }
+  .row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .btn { display:inline-flex; align-items:center; gap:8px; border:1px solid #1f2937; background:#0d141d; color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer; text-decoration:none; font-size:13px; }
+  .btn:hover { border-color:#334155; }
+  .btn-primary { background: #0f172a; border-color:#334155; }
+  .btn-accent { background: #0b1220; border-color:#1d4ed8; color:#bfdbfe; }
+  .btn-ok { background: #052e16; border-color:#14532d; color:#86efac; }
+  .pill { display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid #334155; color:#cbd5e1; }
+  .pill.ok { border-color:#14532d; color:#86efac; }
+  .pill.warn { border-color:#7c2d12; color:#fdba74; }
+  .pill.bad { border-color:#7f1d1d; color:#fecaca; }
+  table { width:100%; border-collapse:separate; border-spacing:0 8px; }
+  thead th { text-align:left; font-size:12px; color:#9ca3af; font-weight:600; padding:0 8px 8px; }
+  tbody tr { background: var(--card); border:1px solid #1f2937; }
+  tbody td { padding:10px 8px; vertical-align:top; border-top:1px solid #1f2937; border-bottom:1px solid #1f2937; }
+  tbody tr td:first-child { border-left:1px solid #1f2937; border-top-left-radius:12px; border-bottom-left-radius:12px; }
+  tbody tr td:last-child { border-right:1px solid #1f2937; border-top-right-radius:12px; border-bottom-right-radius:12px; }
+  .table-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .sticky-col { position:sticky; top:80px; height: calc(100vh - 120px); overflow:auto; padding-bottom:60px; }
+  .status { width: 160px; }
+  .muted { color:#9ca3af; font-size:12px; }
+  .spacer { height: 8px; }
+  .progress { display:flex; align-items:center; gap:8px; }
+  .bar { flex:1; height:8px; border-radius:999px; background:#0d141d; border:1px solid #1f2937; overflow:hidden; }
+  .bar > div { height:100%; width:0%; background:linear-gradient(90deg, #22c55e, #60a5fa); transition: width .3s ease; }
+  .check { display:inline-block; width:16px; height:16px; border-radius:50%; border:1px solid #14532d; background:#052e16; color:#86efac; text-align:center; line-height:16px; font-weight:800; font-size:12px; margin-left:6px; }
+  dialog { border:1px solid #1f2937; border-radius:12px; background: var(--card); color:var(--text); width:min(720px, 90vw); }
+  dialog::backdrop { background: rgba(0,0,0,.5); }
+  .dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  pre { white-space: pre-wrap; background:#0d141d; padding:10px; border-radius:10px; border:1px solid #1f2937; font-size:12px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Opt-Out Dashboard</h1>
+    <div class="sub">Local-first tool to guide and track data-broker opt-outs. Your profile & progress are stored in your browser only.</div>
+  </header>
+
+  <div class="container">
+    <aside class="sticky-col">
+      <div class="card">
+        <h2>Your Profile</h2>
+        <label>Full name</label>
+        <input id="p_name" type="text" placeholder="Jane Q. Doe" />
+
+        <div class="row">
+          <div>
+            <label>Email</label>
+            <input id="p_email" type="email" placeholder="jane@example.com" />
+          </div>
+          <div>
+            <label>Phone</label>
+            <input id="p_phone" type="tel" placeholder="(555) 555-5555" />
+          </div>
+        </div>
+
+        <label>Street address</label>
+        <input id="p_addr1" type="text" placeholder="123 Main St Apt 4B" />
+        <div class="row">
+          <div><label>City</label><input id="p_city" type="text" placeholder="Lakeland" /></div>
+          <div><label>State</label><input id="p_state" type="text" placeholder="FL" /></div>
+        </div>
+        <div class="row">
+          <div><label>ZIP</label><input id="p_zip" type="text" placeholder="33801" /></div>
+          <div><label>Date of birth (optional)</label><input id="p_dob" type="text" placeholder="YYYY-MM-DD" /></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="table-actions">
+          <button class="btn btn-primary" id="saveProfile">Save profile</button>
+          <button class="btn" id="clearProfile">Clear</button>
+        </div>
+        <div id="profileMsg" class="muted" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <h2>Filters</h2>
+        <label>Search (broker or parent)</label>
+        <input id="f_search" type="text" placeholder="Search brokers or parent companies…" />
+
+        <div class="row">
+          <div>
+            <label>Cascade</label>
+            <select id="f_cascade">
+              <option value="">All</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+          </div>
+          <div>
+            <label>Method</label>
+            <select id="f_method">
+              <option value="">All</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Group (Parent)</label>
+        <select id="f_group"></select>
+
+        <div class="spacer"></div>
+        <div class="table-actions">
+          <button class="btn" id="resetFilters">Reset filters</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <h2>Run / Progress</h2>
+        <div class="table-actions">
+          <button class="btn btn-accent" id="scanBrokers">Scan filtered brokers</button>
+          <button class="btn" id="exportStatus">Export status</button>
+          <label class="btn" for="importStatusFile" style="cursor:pointer;">Import status</label>
+          <input type="file" id="importStatusFile" accept="application/json" style="display:none" />
+        </div>
+        <div class="spacer"></div>
+        <div class="progress">
+          <div class="bar"><div id="progressBar"></div></div>
+          <div class="muted" id="progressText">0% (0/0)</div>
+        </div>
+        <div class="muted" style="margin-top:8px;" id="tallies"></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="card">
+        <h2>Broker List</h2>
+        <div class="muted">Buttons appear only when that action is required: <strong>Mail Template</strong>, <strong>Email Template</strong>, <strong>CAPTCHA Verification</strong>. When you finish an item, mark it Verified to show a green check.</div>
+
+        <div style="overflow:auto; margin-top:10px;">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th>Broker</th>
+                <th>Parent / Group</th>
+                <th>Method</th>
+                <th>Cascade</th>
+                <th>Actions</th>
+                <th>Notes & Steps</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="footer muted">Some brokers require captchas, logins, or ID verification. This app prepares templates and routes you to the right place; it doesn't bypass security controls.</div>
+    </main>
+  </div>
+
+  <dialog id="dlgMail">
+    <h3>Mail Template</h3>
+    <div class="muted">Copy this letter onto your letterhead and mail it to the broker. Print with Ctrl/Cmd+P to save as PDF.</div>
+    <pre id="mailText"></pre>
+    <div class="dialog-actions">
+      <button class="btn" id="mailCopy">Copy</button>
+      <button class="btn btn-primary" id="mailClose">Close</button>
+    </div>
+  </dialog>
+
+<script>
+const DATA_URL = "data/brokers.json";
+
+const STATUS_OPTIONS = ["Not started","In progress","Submitted","Verified","Rejected"];
+let DATA = [];
+let METHODS = [];
+let GROUPS = [];
+let statusMap = {};
+const statusKey = "optout_status_v2";
+const profileKey = "optout_profile_v1";
+
+function el(tag, attrs={}, children=[]) {
+  const e = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v]) => {
+    if (k === "class") e.className = v;
+    else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on") && typeof v === "function") e.addEventListener(k.substring(2), v);
+    else e.setAttribute(k,v);
+  });
+  (Array.isArray(children) ? children : [children]).filter(Boolean).forEach(c => e.append(c));
+  return e;
+}
+
+function loadStatus() {
+  try { statusMap = JSON.parse(localStorage.getItem(statusKey) || "{}"); } catch { statusMap = {}; }
+}
+function saveStatus() { localStorage.setItem(statusKey, JSON.stringify(statusMap)); }
+
+function loadProfile() {
+  try {
+    const p = JSON.parse(localStorage.getItem(profileKey) || "{}");
+    ["name","email","phone","addr1","city","state","zip","dob"].forEach(k => {
+      const elid = "p_"+k;
+      if (p[k] && document.getElementById(elid)) document.getElementById(elid).value = p[k];
+    });
+  } catch {}
+}
+
+function saveProfile() {
+  const p = {
+    name: document.getElementById("p_name").value.trim(),
+    email: document.getElementById("p_email").value.trim(),
+    phone: document.getElementById("p_phone").value.trim(),
+    addr1: document.getElementById("p_addr1").value.trim(),
+    city: document.getElementById("p_city").value.trim(),
+    state: document.getElementById("p_state").value.trim(),
+    zip: document.getElementById("p_zip").value.trim(),
+    dob: document.getElementById("p_dob").value.trim(),
+  };
+  localStorage.setItem(profileKey, JSON.stringify(p));
+  const msg = document.getElementById("profileMsg");
+  msg.textContent = "Saved locally.";
+  setTimeout(()=> msg.textContent = "", 2000);
+}
+function clearProfile() {
+  localStorage.removeItem(profileKey);
+  ["p_name","p_email","p_phone","p_addr1","p_city","p_state","p_zip","p_dob"].forEach(id => document.getElementById(id).value = "");
+  const msg = document.getElementById("profileMsg");
+  msg.textContent = "Cleared.";
+  setTimeout(()=> msg.textContent = "", 2000);
+}
+function profile() { try { return JSON.parse(localStorage.getItem(profileKey) || "{}"); } catch { return {}; } }
+
+function statusKeyFor(row) { return `${row["Group Key"]}||${row["Broker Name"]}`; }
+function getStatus(row) { return statusMap[statusKeyFor(row)] || "Not started"; }
+function setStatus(row, val) { statusMap[statusKeyFor(row)] = val; saveStatus(); updateTallies(); }
+
+// Heuristic action classifier
+function classifyActions(row) {
+  const method = String(row["Opt-Out Method"]||"").toLowerCase();
+  const notes = (String(row["Notes"]||"") + " " + String(row["How to Initiate Opt-Out"]||"")).toLowerCase();
+  const urlOrEmail = String(row["Opt-Out URL/Email"]||"");
+  const actions = new Set();
+
+  if (urlOrEmail.includes("@") || method.includes("email")) actions.add("email");
+  if (method.includes("mail") || method.includes("postal") || method.includes("fax")) actions.add("mail");
+  if (method.includes("form") || method.includes("web") || method.includes("portal") || method.includes("online")) actions.add("form");
+  if (notes.includes("captcha")) actions.add("captcha");
+  if (!actions.size && urlOrEmail.startsWith("http")) actions.add("form");
+  if (!actions.size && !urlOrEmail) actions.add("mail"); // default fallback if nothing provided
+  return Array.from(actions);
+}
+
+// Compose helpers
+function buildEmailSubject(row){ return `Opt-Out Request - ${row["Broker Name"]}`; }
+function buildEmailBody(row){
+  const p = profile();
+  const req = String(row["Required Info"]||"").replace(/nan/i,"").trim();
+  const extra = req ? `\n\nAdditional info (from your instructions): ${req}` : "";
+  return [
+    `To ${row["Broker Name"]} Privacy Team,`,
+    ``,
+    `I am requesting removal of my personal information from your data products and marketing databases and that you stop selling or sharing my personal information, as applicable under relevant U.S. privacy laws.`,
+    ``,
+    `Full name: ${p.name||""}`,
+    `Email: ${p.email||""}`,
+    `Phone: ${p.phone||""}`,
+    `Address: ${p.addr1||""}, ${p.city||""}, ${p.state||""} ${p.zip||""}`,
+    `Date of birth: ${p.dob||""}`,
+    extra,
+    ``,
+    `If you share a common database with affiliated brands or child companies, please apply this request across all affiliated properties.`,
+    ``,
+    `Please confirm completion and describe any data retained for legal compliance, and provide instructions if identity verification is required.`,
+    ``,
+    `Thank you,`,
+    ``,
+    `${p.name||""}`
+  ].join("\n");
+}
+
+function mailtoHref(row){
+  const to = String(row["Opt-Out URL/Email"]||"").trim();
+  const subject = encodeURIComponent(buildEmailSubject(row));
+  const body = encodeURIComponent(buildEmailBody(row));
+  return `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
+}
+function gmailHref(row){
+  const to = encodeURIComponent(String(row["Opt-Out URL/Email"]||"").trim());
+  const su = encodeURIComponent(buildEmailSubject(row));
+  const body = encodeURIComponent(buildEmailBody(row));
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${su}&body=${body}`;
+}
+function outlookHref(row){
+  const to = encodeURIComponent(String(row["Opt-Out URL/Email"]||"").trim());
+  const su = encodeURIComponent(buildEmailSubject(row));
+  const body = encodeURIComponent(buildEmailBody(row));
+  return `https://outlook.live.com/owa/?path=/mail/action/compose&to=${to}&subject=${su}&body=${body}`;
+}
+function yahooHref(row){
+  const to = encodeURIComponent(String(row["Opt-Out URL/Email"]||"").trim());
+  const su = encodeURIComponent(buildEmailSubject(row));
+  const body = encodeURIComponent(buildEmailBody(row));
+  return `https://compose.mail.yahoo.com/?to=${to}&subject=${su}&body=${body}`;
+}
+
+function openMailDialog(text) {
+  const dlg = document.getElementById("dlgMail");
+  document.getElementById("mailText").textContent = text;
+  dlg.showModal();
+}
+function closeMailDialog() { document.getElementById("dlgMail").close(); }
+function copyMailDialog() {
+  const txt = document.getElementById("mailText").textContent;
+  navigator.clipboard.writeText(txt);
+}
+
+function buildMailLetter(row){
+  const p = profile();
+  const req = String(row["Required Info"]||"").replace(/nan/i,"").trim();
+  const extra = req ? `\n\nAdditional info (from instructions): ${req}` : "";
+  return `
+${p.name||""}
+${p.addr1||""}
+${p.city||""}, ${p.state||""} ${p.zip||""}
+${p.email||""} • ${p.phone||""}
+
+${new Date().toISOString().slice(0,10)}
+
+Privacy Team
+${row["Broker Name"]||""}
+
+Subject: Opt-Out / Do Not Sell or Share My Personal Information
+
+To whom it may concern,
+
+I am requesting that you remove my personal information from your data products and marketing databases and that you stop selling or sharing my personal information, as applicable under relevant privacy laws.
+
+Full name: ${p.name||""}
+Email: ${p.email||""}
+Phone: ${p.phone||""}
+Address: ${p.addr1||""}, ${p.city||""}, ${p.state||""} ${p.zip||""}
+Date of birth: ${p.dob||""}${extra}
+
+If you share a common database with affiliated brands or child companies, please apply this request across all affiliated properties.
+
+Please confirm completion and describe any data retained for legal compliance, and provide any verification steps if needed.
+
+Sincerely,
+
+${p.name||""}
+`.trim();
+}
+
+function cascadePill(val){
+  const txt = String(val||"Unknown");
+  let cls = "pill";
+  if (txt.toLowerCase().startsWith("yes")) cls += " ok";
+  else if (txt.toLowerCase().startsWith("no")) cls += " bad";
+  else cls += " warn";
+  return el("span",{class:cls, html:txt});
+}
+
+function checkIcon(row){
+  const v = getStatus(row);
+  return v === "Verified" ? el("span",{class:"check", title:"Verified ✓"},["✓"]) : null;
+}
+
+function renderRow(row){
+  const tr = el("tr");
+
+  const broker = el("td",{},[
+    el("div",{html:`<strong>${row["Broker Name"]||""}</strong>`}),
+    el("div",{class:"muted", html: row["Relationship Type"]||""}),
+    checkIcon(row)
+  ]);
+
+  const parent = el("td",{},[
+    el("div",{html: (row["Parent Company"]||"") || row["Group Key"] || ""}),
+    el("div",{class:"muted", html:`Group: ${(row["Group Key"]||"")}`})
+  ]);
+
+  const method = el("td",{},[
+    el("div",{html: row["Opt-Out Method"]||""}),
+    (row["Opt-Out URL/Email"]||"").trim()
+      ? el("div",{class:"muted", html: row["Opt-Out URL/Email"]})
+      : null
+  ]);
+
+  const cascade = el("td",{},[ cascadePill(row["Cascade Opt-Out?"]) ]);
+
+  const actions = el("td",{},[]);
+  const needed = classifyActions(row);
+  const url = (row["Opt-Out URL/Email"]||"").trim();
+
+  if (needed.includes("email") && url.includes("@")){
+    actions.append(el("div",{class:"table-actions"},[
+      el("a",{href: mailtoHref(row), class:"btn"},["Email Template"]),
+      el("a",{href: gmailHref(row), class:"btn btn-accent", target:"_blank"},["Open in Gmail"]),
+      el("a",{href: outlookHref(row), class:"btn", target:"_blank"},["Open in Outlook"]),
+      el("a",{href: yahooHref(row), class:"btn", target:"_blank"},["Open in Yahoo"]),
+    ]));
+  }
+  if (needed.includes("mail")){
+    actions.append(el("div",{class:"table-actions"},[
+      el("button",{class:"btn", onclick:()=> openMailDialog(buildMailLetter(row))},["Mail Template"])
+    ]));
+  }
+  if (needed.includes("form")){
+    actions.append(el("div",{class:"table-actions"},[
+      url.startsWith("http") ? el("a",{href:url, target:"_blank", class:"btn"},["Open Opt-Out Form"]) : null
+    ]));
+  }
+  if (needed.includes("captcha")){
+    actions.append(el("div",{class:"table-actions"},[
+      url.startsWith("http") ? el("a",{href:url, target:"_blank", class:"btn"},["CAPTCHA Verification"]) : null
+    ]));
+  }
+  if (!actions.childNodes.length){
+    actions.append(el("span",{class:"muted", html:"No action detected — review notes."}));
+  }
+
+  // Notes cell
+  const notesText = [row["Notes"]||"", row["How to Initiate Opt-Out"]||""].filter(Boolean).join(" \n ");
+  const notes = el("td",{},[
+    notesText.length > 180
+      ? el("details",{},[
+          el("summary",{html: (notesText.slice(0,180)+"…").replace(/\n/g,"<br/>")}),
+          el("div",{class:"muted", html: notesText.replace(/\n/g,"<br/>")})
+        ])
+      : el("div",{class:"muted", html: notesText.replace(/\n/g,"<br/>")})
+  ]);
+
+  // Status cell
+  const statusSel = el("select",{class:"status"});
+  STATUS_OPTIONS.forEach(s => statusSel.append(el("option",{value:s, html:s})));
+  statusSel.value = getStatus(row);
+  statusSel.addEventListener("change", ()=> { setStatus(row, statusSel.value); rerenderRowCheck(tr, row); });
+  const status = el("td",{},[statusSel]);
+
+  [broker,parent,method,cascade,actions,notes,status].forEach(td => tr.append(td));
+  return tr;
+}
+
+function rerenderRowCheck(tr, row){
+  // Update green check in first cell
+  const firstCell = tr.children[0];
+  const existingCheck = firstCell.querySelector(".check");
+  if (existingCheck) existingCheck.remove();
+  const icon = checkIcon(row);
+  if (icon) firstCell.append(icon);
+}
+
+function buildMethodOptions() {
+  const methods = [...new Set(DATA.map(r => (r["Opt-Out Method"]||"").trim()).filter(Boolean))].sort();
+  METHODS = methods;
+  const sel = document.getElementById("f_method");
+  methods.forEach(m => sel.append(el("option",{value:m, html:m})));
+}
+
+function buildGroupOptions() {
+  const groups = [...new Set(DATA.map(r => (r["Parent Company"]||"").trim() || r["Group Key"]))].sort((a,b)=>a.localeCompare(b));
+  GROUPS = groups;
+  const sel = document.getElementById("f_group");
+  sel.innerHTML = "";
+  sel.append(el("option",{value:"", html:"All"}));
+  groups.forEach(g => sel.append(el("option",{value:g, html:g})));
+}
+
+function applyFilters(){
+  const q = document.getElementById("f_search").value.trim().toLowerCase();
+  const cas = document.getElementById("f_cascade").value;
+  const meth = document.getElementById("f_method").value;
+  const grp = document.getElementById("f_group").value;
+
+  const filtered = DATA.filter(r => {
+    const hay = [r["Broker Name"], r["Parent Company"], r["Group Key"]].join(" ").toLowerCase();
+    if (q && !hay.includes(q)) return false;
+    if (cas) {
+      const c = String(r["Cascade Opt-Out?"]||"").toLowerCase();
+      if (cas==="Yes" && !c.startsWith("yes")) return false;
+      if (cas==="No" && !c.startsWith("no")) return false;
+      if (cas==="Unknown" && !c.startsWith("unknown")) return false;
+    }
+    if (meth && String(r["Opt-Out Method"]||"") !== meth) return false;
+    if (grp && ![r["Parent Company"], r["Group Key"]].includes(grp)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+  filtered.forEach(r => tbody.append(renderRow(r)));
+
+  updateTallies(filtered);
+}
+
+function updateTallies(filtered=null){
+  const rows = filtered || DATA;
+  const total = rows.length;
+  let verified=0, submitted=0, inprog=0, rejected=0;
+  let needEmail=0, needMail=0, needCaptcha=0, needForm=0;
+
+  rows.forEach(r => {
+    const st = getStatus(r);
+    if (st==="Verified") verified++;
+    else if (st==="Submitted") submitted++;
+    else if (st==="In progress") inprog++;
+    else if (st==="Rejected") rejected++;
+
+    const acts = classifyActions(r);
+    if (acts.includes("email")) needEmail++;
+    if (acts.includes("mail")) needMail++;
+    if (acts.includes("captcha")) needCaptcha++;
+    if (acts.includes("form")) needForm++;
+  });
+
+  const done = verified;
+  const pct = total ? Math.round(done*100/total) : 0;
+  document.getElementById("progressBar").style.width = pct+"%";
+  document.getElementById("progressText").textContent = `${pct}% (${done}/${total}) Verified`;
+  document.getElementById("tallies").innerHTML =
+    `Actions detected — Email: ${needEmail}, Mail: ${needMail}, CAPTCHA: ${needCaptcha}, Web Form: ${needForm}. ` +
+    `Statuses — Verified: ${verified}, Submitted: ${submitted}, In progress: ${inprog}, Rejected: ${rejected}.`;
+}
+
+async function init(){
+  loadStatus();
+  loadProfile();
+  const res = await fetch(DATA_URL);
+  DATA = await res.json();
+  buildMethodOptions();
+  buildGroupOptions();
+  applyFilters();
+
+  document.getElementById("f_search").addEventListener("input", applyFilters);
+  document.getElementById("f_cascade").addEventListener("change", applyFilters);
+  document.getElementById("f_method").addEventListener("change", applyFilters);
+  document.getElementById("f_group").addEventListener("change", applyFilters);
+  document.getElementById("resetFilters").addEventListener("click", ()=>{
+    document.getElementById("f_search").value = "";
+    document.getElementById("f_cascade").value = "";
+    document.getElementById("f_method").value = "";
+    document.getElementById("f_group").value = "";
+    applyFilters();
+  });
+
+  document.getElementById("saveProfile").addEventListener("click", saveProfile);
+  document.getElementById("clearProfile").addEventListener("click", clearProfile);
+
+  document.getElementById("exportStatus").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(statusMap, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "optout_status_export.json";
+    a.click();
+  });
+
+  document.getElementById("importStatusFile").addEventListener("change", async (ev)=>{
+    const f = ev.target.files[0];
+    if (!f) return;
+    const txt = await f.text();
+    try {
+      const obj = JSON.parse(txt);
+      statusMap = obj;
+      saveStatus();
+      applyFilters();
+    } catch(e){ alert("Invalid JSON"); }
+  });
+
+  // Run/scan animation
+  document.getElementById("scanBrokers").addEventListener("click", ()=>{
+    const tbody = document.getElementById("tbody");
+    const rows = [...tbody.querySelectorAll("tr")];
+    let i=0;
+    function tick(){
+      if (i>=rows.length) return;
+      const r = rows[i];
+      r.style.outline = "1px solid #1d4ed8";
+      setTimeout(()=>{ r.style.outline="none"; i++; tick(); }, 40);
+    }
+    tick();
+  });
+
+  // Dialog buttons
+  document.getElementById("mailClose").addEventListener("click", closeMailDialog);
+  document.getElementById("mailCopy").addEventListener("click", copyMailDialog);
+}
+
+init();
+</script>
+</body>
+</html>
